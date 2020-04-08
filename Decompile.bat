@@ -1,0 +1,5 @@
+call gradlew setupDecompWorkspace
+call gradlew setupDevWorkspace
+call gradelw setupCIWorkspace
+call gradlew eclipse
+pause
