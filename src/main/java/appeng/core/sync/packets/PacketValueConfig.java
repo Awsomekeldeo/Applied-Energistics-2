@@ -33,7 +33,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumHand;
-
 import appeng.api.config.FuzzyMode;
 import appeng.api.config.Settings;
 import appeng.api.util.IConfigManager;
@@ -169,9 +168,10 @@ public class PacketValueConfig extends AppEngPacket
 		else if( this.Name.startsWith( "PatternTerminal." ) && c instanceof ContainerPatternTerm )
 		{
 			final ContainerPatternTerm cpt = (ContainerPatternTerm) c;
-			if( this.Name.equals( "PatternTerminal.CraftMode" ) )
+			if( this.Name.equals( "PatternTerminal.Mode" ) )
 			{
-				cpt.getPatternTerminal().setCraftingRecipe( this.Value.equals( "1" ) );
+				cpt.getPatternTerminal().setCraftingRecipe( this.Value.equals( "0" ) );
+				cpt.getPatternTerminal().setFluidMode( this.Value.equals( "2" ) );				
 			}
 			else if( this.Name.equals( "PatternTerminal.Encode" ) )
 			{
@@ -184,6 +184,14 @@ public class PacketValueConfig extends AppEngPacket
 			else if( this.Name.equals( "PatternTerminal.Substitute" ) )
 			{
 				cpt.getPatternTerminal().setSubstitution( this.Value.equals( "1" ) );
+			}
+			else if( this.Name.equals( "PatternTerminal.ItemPatternMode" ) )
+			{
+				cpt.getPatternTerminal().setItemPatternMode( Integer.parseInt(this.Value) );
+			}
+			else if( this.Name.equals( "PatternTerminal.FluidPatternMode" ) )
+			{
+				cpt.getPatternTerminal().setFluidPatternMode( Integer.parseInt(this.Value) );
 			}
 		}
 		else if( this.Name.startsWith( "StorageBus." ) )

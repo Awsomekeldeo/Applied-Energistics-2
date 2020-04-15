@@ -32,8 +32,10 @@ import net.minecraft.util.text.translation.I18n;
 import appeng.api.config.AccessRestriction;
 import appeng.api.config.ActionItems;
 import appeng.api.config.CondenserOutput;
+import appeng.api.config.FluidPatternMode;
 import appeng.api.config.FullnessMode;
 import appeng.api.config.FuzzyMode;
+import appeng.api.config.ItemPatternMode;
 import appeng.api.config.ItemSubstitution;
 import appeng.api.config.LevelType;
 import appeng.api.config.OperationMode;
@@ -137,6 +139,11 @@ public class GuiImgButton extends GuiButton implements ITooltip
 			this.registerApp( 8, Settings.ACTIONS, ActionItems.ENCODE, ButtonToolTips.Encode, ButtonToolTips.EncodeDescription );
 			this.registerApp( 4 + 3 * 16, Settings.ACTIONS, ItemSubstitution.ENABLED, ButtonToolTips.Substitutions, ButtonToolTips.SubstitutionsDescEnabled );
 			this.registerApp( 7 + 3 * 16, Settings.ACTIONS, ItemSubstitution.DISABLED, ButtonToolTips.Substitutions, ButtonToolTips.SubstitutionsDescDisabled );
+
+			this.registerApp( 9 + 3 * 16, Settings.ACTIONS, ItemPatternMode.ITEM_TO_ITEM, ButtonToolTips.PatternMode, ButtonToolTips.ItemPatternModeII );
+			this.registerApp( 8 + 3 * 16, Settings.ACTIONS, ItemPatternMode.ITEM_TO_FLUID, ButtonToolTips.PatternMode, ButtonToolTips.ItemPatternModeIF );
+			this.registerApp( 8 + 3 * 16, Settings.ACTIONS, FluidPatternMode.FLUID_TO_FLUID, ButtonToolTips.PatternMode, ButtonToolTips.FluidPatternModeFF );
+			this.registerApp( 9 + 3 * 16, Settings.ACTIONS, FluidPatternMode.FLUID_TO_ITEM, ButtonToolTips.PatternMode, ButtonToolTips.FluidPatternModeFI );
 
 			this.registerApp( 16, Settings.VIEW_MODE, ViewItems.STORED, ButtonToolTips.View, ButtonToolTips.StoredItems );
 			this.registerApp( 18, Settings.VIEW_MODE, ViewItems.ALL, ButtonToolTips.View, ButtonToolTips.StoredCraftable );

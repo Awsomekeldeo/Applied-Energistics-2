@@ -66,6 +66,7 @@ import appeng.client.gui.widgets.ITooltip;
 import appeng.client.me.InternalSlotME;
 import appeng.client.me.SlotDisconnected;
 import appeng.client.me.SlotME;
+import appeng.client.me.SlotFluidME;
 import appeng.client.render.StackSizeRenderer;
 import appeng.container.AEBaseContainer;
 import appeng.container.slot.AppEngCraftingSlot;
@@ -75,6 +76,7 @@ import appeng.container.slot.IOptionalSlot;
 import appeng.container.slot.SlotCraftingTerm;
 import appeng.container.slot.SlotDisabled;
 import appeng.container.slot.SlotFake;
+import appeng.container.slot.SlotFakeFluid;
 import appeng.container.slot.SlotInaccessible;
 import appeng.container.slot.SlotOutput;
 import appeng.container.slot.SlotPatternTerm;
@@ -399,6 +401,31 @@ public abstract class AEBaseGui extends GuiContainer
 			final PacketInventoryAction p = new PacketInventoryAction( action, slotIdx, 0 );
 			NetworkHandler.instance().sendToServer( p );
 
+			return;
+		}
+		else if( slot instanceof SlotFakeFluid )
+		{
+			final SlotFakeFluid fakeFluidSlot = (SlotFakeFluid) slot;
+
+			if( clickType == ClickType.PICKUP )
+			{
+				// TODO: Allow more options
+				if( mouseButton == 0 && fakeFluidSlot.getHasStack() )
+				{
+					//this.container.setTargetStack( meSlot.getAEFluidStack() );
+					//AELog.debug( "mouse0 GUI STACK SIZE %s", meSlot.getAEFluidStack().getStackSize() );
+					NetworkHandler.instance().sendToServer( new PacketInventoryAction( InventoryAction.FILL_ITEM, slot.slotNumber, 0 ) );
+				}
+				else
+				{
+					//this.container.setTargetStack( meSlot.getAEFluidStack() );
+					//if( meSlot.getAEFluidStack() != null )
+					//{
+					//	AELog.debug( "mouse1 GUI STACK SIZE %s", meSlot.getAEFluidStack().getStackSize() );
+					//}
+					NetworkHandler.instance().sendToServer( new PacketInventoryAction( InventoryAction.EMPTY_ITEM, slot.slotNumber, 0 ) );
+				}
+			}
 			return;
 		}
 

@@ -36,6 +36,7 @@ import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.PlayerInvWrapper;
 
 import appeng.api.AEApi;
@@ -61,6 +62,7 @@ import appeng.container.slot.SlotCraftingMatrix;
 import appeng.container.slot.SlotCraftingTerm;
 import appeng.container.slot.SlotDisabled;
 import appeng.container.slot.SlotFake;
+import appeng.container.slot.SlotFakeFluid;
 import appeng.container.slot.SlotInaccessible;
 import appeng.container.slot.SlotPlayerHotBar;
 import appeng.container.slot.SlotPlayerInv;
@@ -673,7 +675,7 @@ public abstract class AEBaseContainer extends Container
 				}
 			}
 
-			if( s instanceof SlotFake )
+			if( s instanceof SlotFake)
 			{
 				final ItemStack hand = player.inventory.getItemStack();
 
@@ -735,6 +737,49 @@ public abstract class AEBaseContainer extends Container
 					case SHIFT_CLICK:
 					default:
 						break;
+				}
+			}
+			else if( s instanceof SlotFakeFluid)
+			{
+				final ItemStack hand = player.inventory.getItemStack();
+
+				switch( action )
+				{
+					case AUTO_CRAFT:
+						break;
+					case CRAFT_ITEM:
+						break;
+					case CRAFT_SHIFT:
+						break;
+					case CRAFT_STACK:
+						break;
+					case CREATIVE_DUPLICATE:
+						break;
+					case EMPTY_ITEM:
+						s.putStack( hand.copy() );
+						break;
+					case FILL_ITEM:
+						break;
+					case MOVE_REGION:
+						break;
+					case PICKUP_OR_SET_DOWN:
+						break;
+					case PICKUP_SINGLE:
+						break;
+					case PLACE_SINGLE:
+						break;
+					case ROLL_DOWN:
+						break;
+					case ROLL_UP:
+						break;
+					case SHIFT_CLICK:
+						break;
+					case SPLIT_OR_PLACE_SINGLE:
+						break;
+					case UPDATE_HAND:
+						break;
+					default:
+						break;				
 				}
 			}
 

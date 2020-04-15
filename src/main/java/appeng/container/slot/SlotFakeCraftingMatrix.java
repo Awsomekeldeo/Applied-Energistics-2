@@ -18,15 +18,26 @@
 
 package appeng.container.slot;
 
-
 import net.minecraftforge.items.IItemHandler;
 
 
-public class SlotFakeCraftingMatrix extends SlotFake
+public class SlotFakeCraftingMatrix extends OptionalSlotFake
 {
 
-	public SlotFakeCraftingMatrix( final IItemHandler inv, final int idx, final int x, final int y )
+	public SlotFakeCraftingMatrix( final IItemHandler inv, final IOptionalSlotHost containerBus, final int idx, final int x, final int y, final int offX, final int offY, final int groupNum )
 	{
-		super( inv, idx, x, y );
+		super( inv, containerBus, idx, x, y, offX, offY, groupNum );
+	}
+
+	@Override
+	public boolean isSlotEnabled()
+	{
+		return true;
+	}
+
+	@Override
+	public boolean shouldDisplay()
+	{
+		return super.isSlotEnabled();
 	}
 }

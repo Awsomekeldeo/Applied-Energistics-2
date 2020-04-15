@@ -24,9 +24,9 @@ import javax.annotation.Nonnull;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.items.SlotItemHandler;
 
 import appeng.api.storage.data.IAEFluidStack;
+import appeng.container.slot.AppEngSlot;
 import appeng.fluids.container.slots.IMEFluidSlot;
 
 
@@ -35,7 +35,7 @@ import appeng.fluids.container.slots.IMEFluidSlot;
  * @version rv6 - 22/05/2018
  * @since rv6 22/05/2018
  */
-public class SlotFluidME extends SlotItemHandler implements IMEFluidSlot
+public class SlotFluidME extends AppEngSlot implements IMEFluidSlot
 {
 
 	private InternalFluidSlotME slot;
