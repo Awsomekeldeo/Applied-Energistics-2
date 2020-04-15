@@ -110,7 +110,8 @@ public enum GuiText
 
 	// Pattern tooltips
 	CraftingPattern,
-	ProcessingPattern,
+	ItemProcessingPattern,
+	FluidProcessingPattern,
 	Crafts,
 	Creates,
 	And,

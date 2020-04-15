@@ -21,6 +21,7 @@ package appeng.container.implementations;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -38,26 +39,36 @@ import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.wrapper.PlayerInvWrapper;
 
 import appeng.api.AEApi;
 import appeng.api.config.Actionable;
+import appeng.api.config.FluidPatternMode;
+import appeng.api.config.ItemPatternMode;
 import appeng.api.definitions.IDefinitions;
 import appeng.api.storage.IMEMonitor;
 import appeng.api.storage.ITerminalHost;
 import appeng.api.storage.channels.IItemStorageChannel;
+import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.api.storage.data.IItemList;
 import appeng.container.ContainerNull;
 import appeng.container.guisync.GuiSync;
 import appeng.container.slot.IOptionalSlotHost;
 import appeng.container.slot.OptionalSlotFake;
+import appeng.container.slot.OptionalSlotFakeFluid;
 import appeng.container.slot.SlotFakeCraftingMatrix;
+import appeng.container.slot.SlotFakeFluidPatternMatrix;
 import appeng.container.slot.SlotPatternOutputs;
 import appeng.container.slot.SlotPatternTerm;
 import appeng.container.slot.SlotRestrictedInput;
 import appeng.core.sync.packets.PacketPatternSlot;
+import appeng.fluids.container.IFluidSyncContainer;
+import appeng.fluids.helper.FluidSyncHelper;
+import appeng.fluids.util.AEFluidInventory;
+import appeng.fluids.util.IAEFluidTank;
 import appeng.helpers.IContainerCraftingPacket;
 import appeng.items.storage.ItemViewCell;
 import appeng.me.helpers.MachineSource;
@@ -72,23 +83,33 @@ import appeng.util.inv.WrapperCursorItemHandler;
 import appeng.util.item.AEItemStack;
 
 
-public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEAppEngInventory, IOptionalSlotHost, IContainerCraftingPacket
+public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEAppEngInventory, IOptionalSlotHost, IContainerCraftingPacket, IFluidSyncContainer
 {
 
 	private final PartPatternTerminal patternTerminal;
 	private final AppEngInternalInventory cOut = new AppEngInternalInventory( null, 1 );
 	private final IItemHandler crafting;
-	private final SlotFakeCraftingMatrix[] craftingSlots = new SlotFakeCraftingMatrix[9];
+	private final AEFluidInventory fluidCrafting;
+	private final OptionalSlotFake[] fakeItemSlots = new OptionalSlotFake[9];
+	private final OptionalSlotFakeFluid[] fakeFluidSlots = new OptionalSlotFakeFluid[9];
 	private final OptionalSlotFake[] outputSlots = new OptionalSlotFake[3];
 	private final SlotPatternTerm craftSlot;
 	private final SlotRestrictedInput patternSlotIN;
 	private final SlotRestrictedInput patternSlotOUT;
 
 	private IRecipe currentRecipe;
+	private FluidSyncHelper sync = null;
+	
 	@GuiSync( 97 )
 	public boolean craftingMode = true;
 	@GuiSync( 96 )
 	public boolean substitute = false;
+	@GuiSync( 95 )
+	public boolean fluidMode = false;
+	@GuiSync( 94 )
+	public ItemPatternMode itemPatternMode = ItemPatternMode.ITEM_TO_ITEM;
+	@GuiSync( 93 )
+	public FluidPatternMode fluidPatternMode = FluidPatternMode.FLUID_TO_FLUID;
 
 	public ContainerPatternTerm( final InventoryPlayer ip, final ITerminalHost monitorable )
 	{
@@ -99,12 +120,25 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 		final IItemHandler output = this.getPatternTerminal().getInventoryByName( "output" );
 
 		this.crafting = this.getPatternTerminal().getInventoryByName( "crafting" );
+		this.fluidCrafting = this.getPatternTerminal().getFluidInventoryByName( "fluidcrafting" );
 
 		for( int y = 0; y < 3; y++ )
 		{
 			for( int x = 0; x < 3; x++ )
 			{
-				this.addSlotToContainer( this.craftingSlots[x + y * 3] = new SlotFakeCraftingMatrix( this.crafting, x + y * 3, 18 + x * 18, -76 + y * 18 ) );
+				this.addSlotToContainer( this.fakeItemSlots[x + y * 3] = new SlotFakeCraftingMatrix( this.crafting, this, x + y * 3, 18 + x * 18, -76 + y * 18, 0, 0, 2 ) );
+				this.fakeItemSlots[x + y * 3].setRenderDisabled( false );
+				this.fakeItemSlots[x + y * 3].setIIcon( -1 );
+			}
+		}
+
+		for( int y = 0; y < 3; y++ )
+		{
+			for( int x = 0; x < 3; x++ )
+			{
+				this.addSlotToContainer( this.fakeFluidSlots[x + y * 3] = new SlotFakeFluidPatternMatrix( this.fluidCrafting, this, x + y * 3, 18 + x * 18, -76 + y * 18, 0, 0, 3 ) );
+				this.fakeFluidSlots[x + y * 3].setRenderDisabled( false );
+				this.fakeFluidSlots[x + y * 3].setIIcon( -1 );
 			}
 		}
 
@@ -129,27 +163,82 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 		this.patternSlotOUT.setStackLimit( 1 );
 
 		this.bindPlayerInventory( ip, 0, 0 );
-		this.updateOrderOfOutputSlots();
+		//this.updateOrderOfOutputSlots();
 	}
 
 	private void updateOrderOfOutputSlots()
 	{
-		if( !this.isCraftingMode() )
+		if( this.isCraftingMode() )
 		{
-			this.craftSlot.xPos = -9000;
-
-			for( int y = 0; y < 3; y++ )
-			{
-				this.outputSlots[y].xPos = this.outputSlots[y].getX();
-			}
-		}
-		else
-		{
+			//crafting pattern
 			this.craftSlot.xPos = this.craftSlot.getX();
 
 			for( int y = 0; y < 3; y++ )
 			{
 				this.outputSlots[y].xPos = -9000;
+			}
+
+			for( int y = 0; y < 3; y++ )
+			{
+				for( int x = 0; x < 3; x++ )
+				{
+					this.fakeItemSlots[x + y * 3].xPos = this.fakeItemSlots[x + y * 3].getX();
+					this.fakeFluidSlots[x + y * 3].xPos = -9000;
+				}
+			}
+		}
+		else if( this.isFluidMode() )
+		{
+			//fluid processing pattern
+			this.craftSlot.xPos = -9000;
+
+			switch( this.getFluidPatternMode() )
+			{
+				case FLUID_TO_FLUID:
+					break;
+				case FLUID_TO_ITEM:
+					break;
+			}
+
+			for( int y = 0; y < 3; y++ )
+			{
+				this.outputSlots[y].xPos = this.outputSlots[y].getX();
+			}
+
+			for( int y = 0; y < 3; y++ )
+			{
+				for( int x = 0; x < 3; x++ )
+				{
+					this.fakeItemSlots[x + y * 3].xPos = -9000;
+					this.fakeFluidSlots[x + y * 3].xPos = this.fakeFluidSlots[x + y * 3].getX();
+				}
+			}
+		}
+		else
+		{
+			//item processing pattern
+			this.craftSlot.xPos = -9000;
+
+			switch( this.getItemPatternMode() )
+			{
+				case ITEM_TO_ITEM:
+					break;
+				case ITEM_TO_FLUID:
+					break;
+			}
+
+			for( int y = 0; y < 3; y++ )
+			{
+				this.outputSlots[y].xPos = this.outputSlots[y].getX();
+			}
+
+			for( int y = 0; y < 3; y++ )
+			{
+				for( int x = 0; x < 3; x++ )
+				{
+					this.fakeItemSlots[x + y * 3].xPos = this.fakeFluidSlots[x + y * 3].getX();
+					this.fakeFluidSlots[x + y * 3].xPos = -9000;
+				}
 			}
 		}
 	}
@@ -159,6 +248,21 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 	{
 		super.putStackInSlot( slotID, stack );
 		this.getAndUpdateOutput();
+	}
+
+	@Override
+	public void receiveFluidSlots( Map<Integer, IAEFluidStack> fluids )
+	{
+		this.getSynchHelper().readPacket( fluids );
+	}
+
+	private FluidSyncHelper getSynchHelper()
+	{
+		if( this.sync == null )
+		{
+			this.sync = new FluidSyncHelper( this.fluidCrafting , 0 );
+		}
+		return this.sync;
 	}
 
 	private ItemStack getAndUpdateOutput()
@@ -274,9 +378,9 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 		final ItemStack[] input = new ItemStack[9];
 		boolean hasValue = false;
 
-		for( int x = 0; x < this.craftingSlots.length; x++ )
+		for( int x = 0; x < this.fakeItemSlots.length; x++ )
 		{
-			input[x] = this.craftingSlots[x].getStack();
+			input[x] = this.fakeItemSlots[x].getStack();
 			if( !input[x].isEmpty() )
 			{
 				hasValue = true;
@@ -489,6 +593,22 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 				this.updateOrderOfOutputSlots();
 			}
 
+			if( this.isFluidMode() != this.getPatternTerminal().isFluidMode() )
+			{
+				this.setFluidMode( this.getPatternTerminal().isFluidMode() );
+				this.updateOrderOfOutputSlots();
+			}
+			
+			if( this.getItemPatternMode() != this.getPatternTerminal().getItemPatternMode() )
+			{
+				this.setItemPatternMode( this.getPatternTerminal().getItemPatternMode().ordinal() );
+				this.updateOrderOfOutputSlots();
+			}
+			else if( this.getFluidPatternMode() != this.getPatternTerminal().getFluidPatternMode() )
+			{
+				this.setFluidPatternMode( this.getPatternTerminal().getFluidPatternMode().ordinal() );
+				this.updateOrderOfOutputSlots();
+			}
 			this.substitute = this.patternTerminal.isSubstitution();
 		}
 	}
@@ -498,7 +618,7 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 	{
 		super.onUpdate( field, oldValue, newValue );
 
-		if( field.equals( "craftingMode" ) )
+		if( field.equals( "craftingMode" ) || field.equals( "fluidMode" ) || field.equals("itemPatternMode") || field.equals("fluidPatternMode"))
 		{
 			this.getAndUpdateOutput();
 			this.updateOrderOfOutputSlots();
@@ -535,7 +655,7 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 
 	public void clear()
 	{
-		for( final Slot s : this.craftingSlots )
+		for( final Slot s : this.fakeItemSlots )
 		{
 			s.putStack( ItemStack.EMPTY );
 		}
@@ -580,7 +700,38 @@ public class ContainerPatternTerm extends ContainerMEMonitorable implements IAEA
 
 	private void setCraftingMode( final boolean craftingMode )
 	{
+		
 		this.craftingMode = craftingMode;
+	}
+
+	public boolean isFluidMode()
+	{
+		return this.fluidMode;
+	}
+
+	private void setFluidMode( final boolean fluidMode )
+	{
+		this.fluidMode = fluidMode;
+	}
+
+	public ItemPatternMode getItemPatternMode()
+	{
+		return this.itemPatternMode;
+	}
+
+	private void setItemPatternMode( final int patternMode)
+	{
+		this.itemPatternMode = ItemPatternMode.values()[patternMode];
+	}
+
+	public FluidPatternMode getFluidPatternMode()
+	{
+		return this.fluidPatternMode;
+	}
+
+	private void setFluidPatternMode( final int patternMode)
+	{
+		this.fluidPatternMode = FluidPatternMode.values()[patternMode];
 	}
 
 	public PartPatternTerminal getPatternTerminal()

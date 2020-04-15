@@ -25,14 +25,19 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
-
+import appeng.api.config.FluidPatternMode;
+import appeng.api.config.ItemPatternMode;
 import appeng.api.implementations.ICraftingPatternItem;
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.api.parts.IPartModel;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.core.AppEng;
 import appeng.core.sync.GuiBridge;
+import appeng.fluids.util.AEFluidInventory;
+import appeng.fluids.util.IAEFluidInventory;
+import appeng.fluids.util.IAEFluidTank;
 import appeng.helpers.Reflected;
 import appeng.items.parts.PartModels;
 import appeng.parts.PartModel;
@@ -53,11 +58,15 @@ public class PartPatternTerminal extends AbstractPartTerminal
 	public static final IPartModel MODELS_HAS_CHANNEL = new PartModel( MODEL_BASE, MODEL_ON, MODEL_STATUS_HAS_CHANNEL );
 
 	private final AppEngInternalInventory crafting = new AppEngInternalInventory( this, 9 );
+	private final AEFluidInventory fluidCrafting = new AEFluidInventory( this, 9 );
 	private final AppEngInternalInventory output = new AppEngInternalInventory( this, 3 );
 	private final AppEngInternalInventory pattern = new AppEngInternalInventory( this, 2 );
 
 	private boolean craftingMode = true;
 	private boolean substitute = false;
+	private boolean fluidMode = false;
+	private ItemPatternMode itemPatternMode = ItemPatternMode.ITEM_TO_ITEM;
+	private FluidPatternMode fluidPatternMode = FluidPatternMode.FLUID_TO_FLUID;	
 
 	@Reflected
 	public PartPatternTerminal( final ItemStack is )
@@ -82,10 +91,14 @@ public class PartPatternTerminal extends AbstractPartTerminal
 	{
 		super.readFromNBT( data );
 		this.setCraftingRecipe( data.getBoolean( "craftingMode" ) );
+		this.setFluidMode( data.getBoolean( "fluidMode" ) );
 		this.setSubstitution( data.getBoolean( "substitute" ) );
+		this.setItemPatternMode(data.getInteger( "itemPatternMode" ));
+		this.setFluidPatternMode(data.getInteger( "fluidPatternMode" ));
 		this.pattern.readFromNBT( data, "pattern" );
 		this.output.readFromNBT( data, "outputList" );
 		this.crafting.readFromNBT( data, "craftingGrid" );
+		this.fluidCrafting.readFromNBT( data, "fluidCraftingGrid");
 	}
 
 	@Override
@@ -93,10 +106,14 @@ public class PartPatternTerminal extends AbstractPartTerminal
 	{
 		super.writeToNBT( data );
 		data.setBoolean( "craftingMode", this.craftingMode );
+		data.setBoolean( "fluidMode", this.fluidMode );
 		data.setBoolean( "substitute", this.substitute );
+		data.setInteger( "itemPatternMode", this.itemPatternMode.ordinal() );
+		data.setInteger( "fluidPatternMode", this.fluidPatternMode.ordinal() );
 		this.pattern.writeToNBT( data, "pattern" );
 		this.output.writeToNBT( data, "outputList" );
 		this.crafting.writeToNBT( data, "craftingGrid" );
+		this.fluidCrafting.writeToNBT( data, "fluidCraftingGrid");
 	}
 
 	@Override
@@ -152,6 +169,10 @@ public class PartPatternTerminal extends AbstractPartTerminal
 		{
 			this.fixCraftingRecipes();
 		}
+		else if( inv == this.fluidCrafting)
+		{
+			//fix fluid crafting pattern
+		}
 
 		this.getHost().markForSave();
 	}
@@ -182,6 +203,37 @@ public class PartPatternTerminal extends AbstractPartTerminal
 		this.fixCraftingRecipes();
 	}
 
+	public boolean isFluidMode()
+	{
+		return this.fluidMode;
+	}
+
+	public void setFluidMode( final boolean fluidMode )
+	{
+		//reset the default pattern mode when the fluid mode is changed
+		this.fluidMode = fluidMode;
+	}
+
+	public ItemPatternMode getItemPatternMode()
+	{
+		return this.itemPatternMode;
+	}
+
+	public void setItemPatternMode( final int patternMode)
+	{
+		this.itemPatternMode = ItemPatternMode.values()[patternMode];
+	}
+
+	public FluidPatternMode getFluidPatternMode()
+	{
+		return this.fluidPatternMode;
+	}
+
+	public void setFluidPatternMode( final int patternMode)
+	{
+		this.fluidPatternMode = FluidPatternMode.values()[patternMode];
+	}
+
 	public boolean isSubstitution()
 	{
 		return this.substitute;
@@ -199,18 +251,26 @@ public class PartPatternTerminal extends AbstractPartTerminal
 		{
 			return this.crafting;
 		}
-
-		if( name.equals( "output" ) )
+		else if( name.equals( "output" ) )
 		{
 			return this.output;
 		}
-
-		if( name.equals( "pattern" ) )
+		else if( name.equals( "pattern" ) )
 		{
 			return this.pattern;
 		}
 
 		return super.getInventoryByName( name );
+	}
+
+	public AEFluidInventory getFluidInventoryByName( final String name )
+	{
+		if( name.equals( "fluidcrafting" ) )
+		{
+			return this.fluidCrafting;
+		}
+
+		return null;
 	}
 
 	@Override

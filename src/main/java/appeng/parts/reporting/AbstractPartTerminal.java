@@ -39,6 +39,8 @@ import appeng.api.storage.ITerminalHost;
 import appeng.api.storage.data.IAEStack;
 import appeng.api.util.IConfigManager;
 import appeng.core.sync.GuiBridge;
+import appeng.fluids.util.IAEFluidInventory;
+import appeng.fluids.util.IAEFluidTank;
 import appeng.me.GridAccessException;
 import appeng.tile.inventory.AppEngInternalInventory;
 import appeng.util.ConfigManager;
@@ -59,7 +61,7 @@ import appeng.util.inv.InvOperation;
  * @version rv3
  * @since rv3
  */
-public abstract class AbstractPartTerminal extends AbstractPartDisplay implements ITerminalHost, IConfigManagerHost, IViewCellStorage, IAEAppEngInventory
+public abstract class AbstractPartTerminal extends AbstractPartDisplay implements ITerminalHost, IConfigManagerHost, IViewCellStorage, IAEAppEngInventory, IAEFluidInventory
 {
 
 	private final IConfigManager cm = new ConfigManager( this );
@@ -156,6 +158,12 @@ public abstract class AbstractPartTerminal extends AbstractPartDisplay implement
 
 	@Override
 	public void onChangeInventory( final IItemHandler inv, final int slot, final InvOperation mc, final ItemStack removedStack, final ItemStack newStack )
+	{
+		this.getHost().markForSave();
+	}
+
+	@Override
+	public void onFluidInventoryChanged( final IAEFluidTank inv, final int slot )
 	{
 		this.getHost().markForSave();
 	}
